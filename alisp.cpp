@@ -322,6 +322,13 @@ namespace Emit
         buf.write8(0x40 | (src << 3) | dst.reg);
         buf.write8(disp8(dst.disp));
     }
+    void loadRegIndirect(Buffer &buf, Register dst, const Indirect &src)
+    {
+        buf.write8(RexPrefix);
+        buf.write8(0x8b);
+        buf.write8(0x40 | (dst << 3) | src.reg);
+        buf.write8(disp8(src.disp));
+    }
     void addRegIndirect(Buffer &buf, Register dst, const Indirect &src)
     {
         buf.write8(RexPrefix);
@@ -521,11 +528,21 @@ namespace Compile
             auto pair = node->asPair();
             return call(buf, pair->car, pair->cdr, stackIndex, varEnv);
         }
+        else if (node->isSymbol())
+        {
+            auto symbol = node->asSymbol()->str;
+            if (auto val = varEnv->find(symbol))
+            {
+                Emit::loadRegIndirect(buf, Emit::Rax, Emit::Indirect{Emit::Rbp, static_cast<int8_t>(*val)});
+                return 0;
+            }
+            return 1;
+        }
         assert(0 && "Unexpected node type");
         return -1;
     }
 
-    int function(Buffer &buf, ASTNode *node, const Env* varEnv)
+    int function(Buffer &buf, ASTNode *node, const Env *varEnv)
     {
         buf.writeArray(FunctionPrologue, sizeof(FunctionPrologue));
         _(expr(buf, node, -WordSize, varEnv));

@@ -199,6 +199,7 @@ namespace Emit
     void setccImm8(Buffer &buf, Condition cond, PartialRegister dst);
     void ret(Buffer &buf);
     void storeIndirectReg(Buffer& buf, const Indirect& dst, const Register src);
+    void loadRegIndirect(Buffer& buf, Register dst, const Indirect& src);
     void addRegIndirect(Buffer& buf, Register dst, const Indirect& src);
     void cmpRegIndirect(Buffer& buf, Register left, const Indirect& right);
 } // namespace Emit
