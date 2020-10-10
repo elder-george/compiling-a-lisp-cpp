@@ -390,6 +390,31 @@ namespace Compile
         return list->asPair()->cdr->asPair()->car;
     }
 
+    int let(Buffer& buf, ASTNode* bindings, ASTNode* body, word stackIndex, const Env* bindingEnv, const Env* bodyEnv) {
+        if (bindings->isNil()) {
+            // Base case: no bindings. Compile the body
+            _(expr(buf, body, stackIndex, bodyEnv));
+            return 0;
+        } else {
+            assert(bindings->isPair());
+            // Get the next binding
+            auto pair = bindings->asPair();
+            assert(pair->car->isPair());
+            auto binding = pair ->car->asPair();
+            auto name = binding->car;
+            assert(name->isSymbol());
+            auto bindingExpr = binding->cdr->asPair()->car;
+              // Compile the binding expression
+            _(expr(buf, bindingExpr, stackIndex, bindingEnv));
+            Emit::storeIndirectReg(buf, Emit::Indirect{Emit::Rbp, static_cast<int8_t>(stackIndex)}, Emit::Rax);
+            // Bind the name
+            Env entry {name->asSymbol()->str, stackIndex, bodyEnv};
+            // process the rest of bindings recursively
+            _(let(buf, pair->cdr, body, stackIndex - WordSize, bindingEnv, &entry));
+            return 0;
+        }
+    }
+
     int call(Buffer &buf, ASTNode *callable, ASTNode *args, word stackIndex, const Env *varEnv)
     {
         // assert(args->asPair()->cdr == ASTNode::nil() && "Only unary function calls supported");
@@ -492,6 +517,10 @@ namespace Compile
                 Emit::shlRegImm8(buf, Emit::Rax, Objects::BoolShift);
                 Emit::orRegImm8(buf, Emit::Rax, Objects::BoolTag);
                 return 0;
+            } else if (symbol->str == "let") {
+                return let(buf, operand1(args), operand2(args), stackIndex, 
+                    varEnv, // binding env. 
+                    varEnv); // body env.
             }
         }
         assert(false && "unexpected call type");
@@ -536,7 +565,7 @@ namespace Compile
                 Emit::loadRegIndirect(buf, Emit::Rax, Emit::Indirect{Emit::Rbp, static_cast<int8_t>(*val)});
                 return 0;
             }
-            return 1;
+            return -1;
         }
         assert(0 && "Unexpected node type");
         return -1;

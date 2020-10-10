@@ -139,7 +139,7 @@ struct Symbol
 struct Env{
     std::string name;
     word value;
-    Env* prev;
+    const Env* prev;
 
     std::optional<word> find(const std::string_view& name) const;
 };

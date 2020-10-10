@@ -30,16 +30,20 @@ TEST_CASE("Encode bool", "[objects]")
     REQUIRE(0b0001'1111 == Objects::encodeBool(false));
 }
 
-TEST_CASE("Env::find", "[env]"){
-    Env e1 { "alpha", 1, nullptr};
-    Env e2 { "beta", 2, &e1};
-    SECTION("can find alpha") {
+TEST_CASE("Env::find", "[env]")
+{
+    Env e1{"alpha", 1, nullptr};
+    Env e2{"beta", 2, &e1};
+    SECTION("can find alpha")
+    {
         REQUIRE(*e2.find("alpha") == 1);
     }
-    SECTION("can find beta") {
+    SECTION("can find beta")
+    {
         REQUIRE(*e2.find("beta") == 2);
     }
-    SECTION("can't find an unknown value") {
+    SECTION("can't find an unknown value")
+    {
         REQUIRE(!e2.find("gamma"));
     }
 }
@@ -170,7 +174,8 @@ TEST_CASE("Compile nil", "[compiler]")
     REQUIRE(code.toFunc<int()>()() == Objects::nil());
 }
 
-static auto wrap(ASTNode* node){
+static auto wrap(ASTNode *node)
+{
     return std::unique_ptr<ASTNode, decltype(&heapFree)>(node, heapFree);
 }
 
@@ -365,6 +370,58 @@ TEST_CASE("Compile binary < with LHS greater than RHS returns false", "[compiler
     REQUIRE(code.toFunc<int()>()() == Objects::encodeBool(false));
 }
 
+TEST_CASE("Compile let with no bindings", "[compiler]")
+{
+    Buffer buf;
+    auto node = Reader::read("(let () (+ 1 2))");
+    auto compileResult = Compile::function(buf, node.get(), nullptr);
+    REQUIRE(0 == compileResult);
+    auto code = buf.freeze();
+    auto result = code.toFunc<int()>()();
+    REQUIRE(3 == Objects::decodeInteger(result));
+}
+
+TEST_CASE("Compile let with one binding", "[compiler]")
+{
+    Buffer buf;
+    auto node = Reader::read("(let ((a 1)) (+ a 2))");
+    auto compileResult = Compile::function(buf, node.get(), nullptr);
+    REQUIRE(0 == compileResult);
+    auto code = buf.freeze();
+    auto result = code.toFunc<int()>()();
+    REQUIRE(3 == Objects::decodeInteger(result));
+}
+
+TEST_CASE("Compile let with two bindings", "[compiler]")
+{
+    Buffer buf;
+    auto node = Reader::read("(let ((a 1) (b 2)) (+ a b))");
+    auto compileResult = Compile::function(buf, node.get(), nullptr);
+    REQUIRE(0 == compileResult);
+    auto code = buf.freeze();
+    auto result = code.toFunc<int()>()();
+    REQUIRE(3 == Objects::decodeInteger(result));
+}
+
+TEST_CASE("Compile nested let", "[compiler]")
+{
+    Buffer buf;
+    auto node = Reader::read("(let ((a 1)) (let ((b 2)) (+ a b)))");
+    auto compileResult = Compile::function(buf, node.get(), nullptr);
+    REQUIRE(0 == compileResult);
+    auto code = buf.freeze();
+    auto result = code.toFunc<int()>()();
+    REQUIRE(3 == Objects::decodeInteger(result));
+}
+
+TEST_CASE("let is not let*", "[compiler]")
+{
+    Buffer buf;
+    auto node = Reader::read("(let ((a 1) (b a)) (+ a b))");
+    auto compileResult = Compile::function(buf, node.get(), nullptr);
+    REQUIRE(-1 == compileResult);
+}
+
 TEST_CASE("Read with unsigned integer returns integer", "[reader]")
 {
     auto node = Reader::read("1234");
@@ -389,7 +446,8 @@ TEST_CASE("Leading whitespaces are ignored", "[reader]")
     REQUIRE(1234 == node->getInteger());
 }
 
-TEST_CASE("Read with list returns list", "[reader]"){
+TEST_CASE("Read with list returns list", "[reader]")
+{
     auto node = Reader::read("(1 2 0)");
     REQUIRE(node->isPair());
     auto pair = node->asPair();
@@ -401,7 +459,8 @@ TEST_CASE("Read with list returns list", "[reader]"){
     REQUIRE(pair->cdr->isNil());
 }
 
-TEST_CASE("Read with list with spaces returns list", "[reader]"){
+TEST_CASE("Read with list with spaces returns list", "[reader]")
+{
     auto node = Reader::read("( 1\t2 0  )");
     REQUIRE(node->isPair());
     auto pair = node->asPair();
@@ -419,7 +478,8 @@ TEST_CASE("Read with symbol returns symbol", "[reader]")
     REQUIRE("hello?+-*=>" == node->asSymbol()->str);
 }
 
-TEST_CASE("Read with symbol with trailing spaces", "[reader]"){
+TEST_CASE("Read with symbol with trailing spaces", "[reader]")
+{
     auto node = Reader::read("add1 1");
     REQUIRE(node->isSymbol());
     REQUIRE(node->asSymbol()->str == "add1");
