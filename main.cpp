@@ -16,7 +16,7 @@ int repl()
         std::string line;
         if (!getline(cin, line) || line.size() == 0)
         {
-            fmt::print("Good bye");
+            fmt::print("Good bye\n");
             break;
         }
         // parse the line
@@ -28,19 +28,14 @@ int repl()
         }
         // Compile the line
         Buffer buf;
-        auto result = Compile::expr(buf, node.get(), -WordSize, nullptr);
+        auto result = Compile::function(buf, node.get());
         if (result != 0)
         {
             fmt::print(cerr, "Compile error\n");
             continue;
         }
-
-        // Print the assembled code
-        for (size_t i = 0; i < buf._buf.size(); i++)
-        {
-            fmt::print(cerr, "{:02x} ", buf._buf[i]);
-        }
-        cerr << "\n";
+        auto code = buf.freeze();
+        fmt::print("Result = {}\n", Objects::decodeInteger(code.toFunc<int()>()()));
     } while (true);
     return 0;
 }
