@@ -3,6 +3,7 @@
 #include <vector>
 #include <memory>
 #include <string>
+#include <optional>
 
 using JitFunction = int (*)();
 
@@ -133,6 +134,14 @@ struct Pair
 struct Symbol
 {
     std::string str{};
+};
+
+struct Env{
+    std::string name;
+    word value;
+    Env* prev;
+
+    std::optional<word> find(const std::string_view& name) const;
 };
 
 // Emit

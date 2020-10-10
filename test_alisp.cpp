@@ -30,6 +30,20 @@ TEST_CASE("Encode bool", "[objects]")
     REQUIRE(0b0001'1111 == Objects::encodeBool(false));
 }
 
+TEST_CASE("Env::find", "[env]"){
+    Env e1 { "alpha", 1, nullptr};
+    Env e2 { "beta", 2, &e1};
+    SECTION("can find alpha") {
+        REQUIRE(*e2.find("alpha") == 1);
+    }
+    SECTION("can find beta") {
+        REQUIRE(*e2.find("beta") == 2);
+    }
+    SECTION("can't find an unknown value") {
+        REQUIRE(!e2.find("gamma"));
+    }
+}
+
 TEST_CASE("Compile positive integer", "[compiler]")
 {
     word value = 123;

@@ -223,6 +223,15 @@ bool ASTNode::isError() const
     return reinterpret_cast<uword>(this) == Objects::error();
 }
 
+std::optional<word> Env::find(const std::string_view& name) const {
+    for (auto env = this; env; env = env->prev) {
+        if (name == env->name) {
+            return env->value;
+        }
+    }
+    return {};
+}
+
 namespace Emit
 {
     constexpr uint8_t RexPrefix = 0x48;
