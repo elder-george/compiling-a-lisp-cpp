@@ -54,7 +54,7 @@ TEST_CASE("Compile positive integer", "[compiler]")
     auto node = ASTNode::newInteger(value);
 
     Buffer buf;
-    auto compileResult = Compile::function(buf, node, nullptr);
+    auto compileResult = Compile::function(buf, node);
     REQUIRE(compileResult == 0);
 
     std::vector<uint8_t> expected = {
@@ -76,7 +76,7 @@ TEST_CASE("Compile negative integer", "[compiler]")
     auto node = ASTNode::newInteger(value);
 
     Buffer buf;
-    auto compileResult = Compile::function(buf, node, nullptr);
+    auto compileResult = Compile::function(buf, node);
     REQUIRE(compileResult == 0);
 
     std::vector<uint8_t> expected = {
@@ -97,7 +97,7 @@ TEST_CASE("Compile char", "[compiler]")
     char value = 'a';
     auto node = ASTNode::newChar(value);
     Buffer buf;
-    auto compileResult = Compile::function(buf, node, nullptr);
+    auto compileResult = Compile::function(buf, node);
     REQUIRE(compileResult == 0);
 
     std::vector<uint8_t> expected{
@@ -118,7 +118,7 @@ TEST_CASE("Compile true", "[compiler]")
     auto value = true;
     auto node = ASTNode::newBool(value);
     Buffer buf;
-    auto compileResult = Compile::function(buf, node, nullptr);
+    auto compileResult = Compile::function(buf, node);
     REQUIRE(compileResult == 0);
 
     std::vector<uint8_t> expected{
@@ -139,7 +139,7 @@ TEST_CASE("Compile false", "[compiler]")
     auto value = false;
     auto node = ASTNode::newBool(value);
     Buffer buf;
-    auto compileResult = Compile::function(buf, node, nullptr);
+    auto compileResult = Compile::function(buf, node);
     REQUIRE(compileResult == 0);
 
     std::vector<uint8_t> expected{
@@ -158,7 +158,7 @@ TEST_CASE("Compile false", "[compiler]")
 TEST_CASE("Compile nil", "[compiler]")
 {
     Buffer buf;
-    auto compileResult = Compile::function(buf, ASTNode::nil(), nullptr);
+    auto compileResult = Compile::function(buf, ASTNode::nil());
     REQUIRE(compileResult == 0);
     std::vector<uint8_t> expected = {
         0x55,             // push rbp
@@ -189,7 +189,7 @@ TEST_CASE("Compile unary add1", "[compiler]")
     Buffer buf;
     auto node = makeUnaryCall("add1", ASTNode::newInteger(123));
 
-    REQUIRE(0 == Compile::function(buf, node.get(), nullptr));
+    REQUIRE(0 == Compile::function(buf, node.get()));
 
     std::vector<uint8_t> expected{
         0x55,                                     // push rbp
@@ -210,7 +210,7 @@ TEST_CASE("Compile unary add1 nested", "[compiler]")
     Buffer buf;
     auto node = makeUnaryCall("add1", ASTNode::newUnaryCall("add1", ASTNode::newInteger(123)));
 
-    REQUIRE(0 == Compile::function(buf, node.get(), nullptr));
+    REQUIRE(0 == Compile::function(buf, node.get()));
     std::vector<uint8_t> expected{
         0x55,                                     // push rbp
         0x48, 0x89, 0xe5,                         // mov rbp, rsp
@@ -229,7 +229,7 @@ TEST_CASE("compile boolean? with non-boolean returns false", "[compiler]")
 {
     Buffer buf;
     auto node = makeUnaryCall("boolean?", ASTNode::newInteger(5));
-    REQUIRE(0 == Compile::function(buf, node.get(), nullptr));
+    REQUIRE(0 == Compile::function(buf, node.get()));
     std::vector<uint8_t> expected{
         0x55,
         0x48, 0x89, 0xe5,
@@ -251,7 +251,7 @@ TEST_CASE("compile boolean? with true returns true", "[compiler]")
 {
     Buffer buf;
     auto node = makeUnaryCall("boolean?", ASTNode::newBool(true));
-    REQUIRE(0 == Compile::function(buf, node.get(), nullptr));
+    REQUIRE(0 == Compile::function(buf, node.get()));
     std::vector<uint8_t> expected{
         0x55,
         0x48, 0x89, 0xe5,
@@ -273,7 +273,7 @@ TEST_CASE("compile boolean? with false returns true", "[compiler]")
 {
     Buffer buf;
     auto node = makeUnaryCall("boolean?", ASTNode::newBool(false));
-    REQUIRE(0 == Compile::function(buf, node.get(), nullptr));
+    REQUIRE(0 == Compile::function(buf, node.get()));
     std::vector<uint8_t> expected{
         0x55,
         0x48, 0x89, 0xe5,
@@ -300,7 +300,7 @@ TEST_CASE("Compile binary +", "[compiler]")
 {
     Buffer buf;
     auto node = makeBinaryCall("+", ASTNode::newInteger(5), ASTNode::newInteger(8));
-    REQUIRE(0 == Compile::function(buf, node.get(), nullptr));
+    REQUIRE(0 == Compile::function(buf, node.get()));
     std::vector<uint8_t> expected{
         0x55,
         0x48, 0x89, 0xe5,
@@ -319,7 +319,7 @@ TEST_CASE("Compile binary -", "[compiler]")
 {
     Buffer buf;
     auto node = makeBinaryCall("-", ASTNode::newInteger(5), ASTNode::newInteger(8));
-    REQUIRE(0 == Compile::function(buf, node.get(), nullptr));
+    REQUIRE(0 == Compile::function(buf, node.get()));
     std::vector<uint8_t> expected{
         0x55,
         0x48, 0x89, 0xe5,
@@ -338,7 +338,7 @@ TEST_CASE("Compile binary = with LHS equal to RHS returns true", "[compiler]")
 {
     Buffer buf;
     auto node = makeBinaryCall("=", ASTNode::newInteger(5), ASTNode::newInteger(5));
-    REQUIRE(0 == Compile::function(buf, node.get(), nullptr));
+    REQUIRE(0 == Compile::function(buf, node.get()));
     auto code = buf.freeze();
     REQUIRE(code.toFunc<int()>()() == Objects::encodeBool(true));
 }
@@ -347,7 +347,7 @@ TEST_CASE("Compile binary = with LHS not equal to RHS returns false", "[compiler
 {
     Buffer buf;
     auto node = makeBinaryCall("=", ASTNode::newInteger(6), ASTNode::newInteger(5));
-    REQUIRE(0 == Compile::function(buf, node.get(), nullptr));
+    REQUIRE(0 == Compile::function(buf, node.get()));
     auto code = buf.freeze();
     REQUIRE(code.toFunc<int()>()() == Objects::encodeBool(false));
 }
@@ -356,7 +356,7 @@ TEST_CASE("Compile binary < with LHS less than RHS returns true", "[compiler]")
 {
     Buffer buf;
     auto node = makeBinaryCall("<", ASTNode::newInteger(5), ASTNode::newInteger(6));
-    REQUIRE(0 == Compile::function(buf, node.get(), nullptr));
+    REQUIRE(0 == Compile::function(buf, node.get()));
     auto code = buf.freeze();
     REQUIRE(code.toFunc<int()>()() == Objects::encodeBool(true));
 }
@@ -365,7 +365,7 @@ TEST_CASE("Compile binary < with LHS greater than RHS returns false", "[compiler
 {
     Buffer buf;
     auto node = makeBinaryCall("<", ASTNode::newInteger(6), ASTNode::newInteger(5));
-    REQUIRE(0 == Compile::function(buf, node.get(), nullptr));
+    REQUIRE(0 == Compile::function(buf, node.get()));
     auto code = buf.freeze();
     REQUIRE(code.toFunc<int()>()() == Objects::encodeBool(false));
 }
@@ -374,7 +374,7 @@ TEST_CASE("Compile let with no bindings", "[compiler]")
 {
     Buffer buf;
     auto node = Reader::read("(let () (+ 1 2))");
-    auto compileResult = Compile::function(buf, node.get(), nullptr);
+    auto compileResult = Compile::function(buf, node.get());
     REQUIRE(0 == compileResult);
     auto code = buf.freeze();
     auto result = code.toFunc<int()>()();
@@ -385,7 +385,7 @@ TEST_CASE("Compile let with one binding", "[compiler]")
 {
     Buffer buf;
     auto node = Reader::read("(let ((a 1)) (+ a 2))");
-    auto compileResult = Compile::function(buf, node.get(), nullptr);
+    auto compileResult = Compile::function(buf, node.get());
     REQUIRE(0 == compileResult);
     auto code = buf.freeze();
     auto result = code.toFunc<int()>()();
@@ -396,7 +396,7 @@ TEST_CASE("Compile let with two bindings", "[compiler]")
 {
     Buffer buf;
     auto node = Reader::read("(let ((a 1) (b 2)) (+ a b))");
-    auto compileResult = Compile::function(buf, node.get(), nullptr);
+    auto compileResult = Compile::function(buf, node.get());
     REQUIRE(0 == compileResult);
     auto code = buf.freeze();
     auto result = code.toFunc<int()>()();
@@ -407,7 +407,7 @@ TEST_CASE("Compile nested let", "[compiler]")
 {
     Buffer buf;
     auto node = Reader::read("(let ((a 1)) (let ((b 2)) (+ a b)))");
-    auto compileResult = Compile::function(buf, node.get(), nullptr);
+    auto compileResult = Compile::function(buf, node.get());
     REQUIRE(0 == compileResult);
     auto code = buf.freeze();
     auto result = code.toFunc<int()>()();
@@ -418,7 +418,7 @@ TEST_CASE("let is not let*", "[compiler]")
 {
     Buffer buf;
     auto node = Reader::read("(let ((a 1) (b a)) (+ a b))");
-    auto compileResult = Compile::function(buf, node.get(), nullptr);
+    auto compileResult = Compile::function(buf, node.get());
     REQUIRE(-1 == compileResult);
 }
 
@@ -426,7 +426,7 @@ TEST_CASE("if with true cond", "[compiler]")
 {
     Buffer buf;
     auto node = Reader::read("(if #t 1 2)");
-    auto compileResult = Compile::function(buf, node.get(), nullptr);
+    auto compileResult = Compile::function(buf, node.get());
     REQUIRE(0 == compileResult);
 
     std::vector<uint8_t> expected = {
@@ -451,7 +451,7 @@ TEST_CASE("if with false cond", "[compiler]")
 {
     Buffer buf;
     auto node = Reader::read("(if #f 1 2)");
-    auto compileResult = Compile::function(buf, node.get(), nullptr);
+    auto compileResult = Compile::function(buf, node.get());
     REQUIRE(0 == compileResult);
 
     std::vector<uint8_t> expected = {

@@ -212,7 +212,7 @@ namespace Emit
 namespace Compile
 {
     int expr(Buffer &buf, ASTNode *node, word stackIndex, const Env* varEnv);
-    int function(Buffer &buf, ASTNode *node, const Env* varEnv);
+    int function(Buffer &buf, ASTNode *node);
 } // namespace Compile
 
 namespace Reader{

@@ -637,10 +637,10 @@ namespace Compile
         return -1;
     }
 
-    int function(Buffer &buf, ASTNode *node, const Env *varEnv)
+    int function(Buffer &buf, ASTNode *node)
     {
         buf.writeArray(FunctionPrologue, sizeof(FunctionPrologue));
-        _(expr(buf, node, -WordSize, varEnv));
+        _(expr(buf, node, -WordSize, nullptr));
         buf.writeArray(FunctionEpilogue, sizeof(FunctionEpilogue));
 
         return 0;
