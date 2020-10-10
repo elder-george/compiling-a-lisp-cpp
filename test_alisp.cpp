@@ -422,6 +422,56 @@ TEST_CASE("let is not let*", "[compiler]")
     REQUIRE(-1 == compileResult);
 }
 
+TEST_CASE("if with true cond", "[compiler]")
+{
+    Buffer buf;
+    auto node = Reader::read("(if #t 1 2)");
+    auto compileResult = Compile::function(buf, node.get(), nullptr);
+    REQUIRE(0 == compileResult);
+
+    std::vector<uint8_t> expected = {
+        0x55,
+        0x48, 0x89, 0xe5,
+        0x48, 0xc7, 0xc0, 0x9f, 0x00, 0x00, 0x00, // mov rax, 0x9f
+        0x48, 0x3d, 0x1f, 0x00, 0x00, 0x00,       // cmp rax, 0x1f
+        0x0f, 0x84, 0x0c, 0x00, 0x00, 0x00,       // je alternate
+        0x48, 0xc7, 0xc0, 0x04, 0x00, 0x00, 0x00, // mov rax, compile(1)
+        0xe9, 0x07, 0x00, 0x00, 0x00,             // jmp end
+        // alternate:
+        0x48, 0xc7, 0xc0, 0x08, 0x00, 0x00, 0x00, // mov rax, compile(2)
+        0x5d,
+        0xc3};
+    REQUIRE(expected == buf._buf);
+    auto code = buf.freeze();
+    auto result = code.toFunc<int()>()();
+    REQUIRE(1 == Objects::decodeInteger(result));
+}
+
+TEST_CASE("if with false cond", "[compiler]")
+{
+    Buffer buf;
+    auto node = Reader::read("(if #f 1 2)");
+    auto compileResult = Compile::function(buf, node.get(), nullptr);
+    REQUIRE(0 == compileResult);
+
+    std::vector<uint8_t> expected = {
+        0x55,
+        0x48, 0x89, 0xe5,
+        0x48, 0xc7, 0xc0, 0x1f, 0x00, 0x00, 0x00, // mov rax, 0x1f
+        0x48, 0x3d, 0x1f, 0x00, 0x00, 0x00,       // cmp rax, 0x1f
+        0x0f, 0x84, 0x0c, 0x00, 0x00, 0x00,       // je alternate
+        0x48, 0xc7, 0xc0, 0x04, 0x00, 0x00, 0x00, // mov rax, compile(1)
+        0xe9, 0x07, 0x00, 0x00, 0x00,             // jmp end
+        // alternate:
+        0x48, 0xc7, 0xc0, 0x08, 0x00, 0x00, 0x00, // mov rax, compile(2)
+        0x5d,
+        0xc3};
+    REQUIRE(expected == buf._buf);
+    auto code = buf.freeze();
+    auto result = code.toFunc<int()>()();
+    REQUIRE(2 == Objects::decodeInteger(result));
+}
+
 TEST_CASE("Read with unsigned integer returns integer", "[reader]")
 {
     auto node = Reader::read("1234");

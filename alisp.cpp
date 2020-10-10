@@ -424,6 +424,10 @@ namespace Compile
     {
         return list->asPair()->cdr->asPair()->car;
     }
+    ASTNode *operand3(ASTNode *list)
+    {
+        return list->asPair()->cdr->asPair()->cdr->asPair()->car;
+    }
 
     int let(Buffer &buf, ASTNode *bindings, ASTNode *body, word stackIndex, const Env *bindingEnv, const Env *bodyEnv)
     {
@@ -452,6 +456,20 @@ namespace Compile
             _(let(buf, pair->cdr, body, stackIndex - WordSize, bindingEnv, &entry));
             return 0;
         }
+    }
+
+    constexpr int32_t LabelPlaceholder = 0xdeadbeef;
+    int if_(Buffer &buf, ASTNode *condition, ASTNode *onThen, ASTNode *onElse, word stackIndex, const Env *varEnv)
+    {
+        _(expr(buf, condition, stackIndex, varEnv));
+        Emit::cmpRegImm32(buf, Emit::Rax, static_cast<int32_t>(Objects::encodeBool(false)));
+        auto onElsePos = Emit::jcc(buf, Emit::Equal, LabelPlaceholder);
+        _(expr(buf, onThen, stackIndex, varEnv));
+        auto endPos = Emit::jmp(buf, LabelPlaceholder);
+        Emit::backpatchImm32(buf, onElsePos);
+        _(expr(buf, onElse, stackIndex, varEnv));
+        Emit::backpatchImm32(buf, endPos);
+        return 0;
     }
 
     int call(Buffer &buf, ASTNode *callable, ASTNode *args, word stackIndex, const Env *varEnv)
@@ -562,6 +580,13 @@ namespace Compile
                 return let(buf, operand1(args), operand2(args), stackIndex,
                            varEnv,  // binding env.
                            varEnv); // body env.
+            }
+            else if (symbol->str == "if")
+            {
+                return if_(buf, operand1(args), // condition
+                           operand2(args),      // on true
+                           operand3(args),      // on false
+                           stackIndex, varEnv);
             }
         }
         assert(false && "unexpected call type");
