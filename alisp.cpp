@@ -333,21 +333,21 @@ namespace Emit
     {
         buf.write8(RexPrefix);
         buf.write8(0x3);
-        buf.write8(0x40 | (dst << 8) | src.reg);
+        buf.write8(0x40 | (dst << 3) | src.reg);
         buf.write8(disp8(src.disp));
     }
     void subRegIndirect(Buffer &buf, Register dst, const Indirect &src)
     {
         buf.write8(RexPrefix);
         buf.write8(0x2b);
-        buf.write8(0x40 | (dst << 8) | src.reg);
+        buf.write8(0x40 | (dst << 3) | src.reg);
         buf.write8(disp8(src.disp));
     }
     void cmpRegIndirect(Buffer &buf, Register left, const Indirect &right)
     {
         buf.write8(RexPrefix);
         buf.write8(0x3b);
-        buf.write8(0x40 | (left << 8) | right.reg);
+        buf.write8(0x40 | (left << 3) | right.reg);
         buf.write8(disp8(right.disp));
     }
 
