@@ -40,6 +40,19 @@ void Buffer::writeArray(const uint8_t array[], size_t size)
     }
 }
 
+void Buffer::writeAt32(size_t pos, uint32_t v)
+{
+    for (auto i = 0u; i < 4; ++i)
+    {
+        _buf.at(pos + i) = static_cast<uint8_t>(v >> i * BitsPerByte);
+    }
+}
+
+size_t Buffer::size() const
+{
+    return _buf.size();
+}
+
 Code Buffer::freeze() const
 {
     return Code{_buf};
@@ -314,6 +327,7 @@ namespace Emit
     }
 
     static uint8_t disp8(int8_t disp) { return disp >= 0 ? disp : 0x100 + disp; }
+    static uint32_t disp32(int32_t disp) { return disp >= 0 ? disp : static_cast<uint32_t>(0x1'0000'0000 + disp); }
 
     void storeIndirectReg(Buffer &buf, const Indirect &dst, const Register src)
     {
@@ -350,7 +364,28 @@ namespace Emit
         buf.write8(0x40 | (left << 3) | right.reg);
         buf.write8(disp8(right.disp));
     }
+    word jcc(Buffer &buf, Condition cond, int32_t offset)
+    {
+        buf.write8(0x0f);
+        buf.write8(0x80 | cond);
+        auto pos = buf.size();
+        buf.write32(disp32(offset));
+        return static_cast<word>(pos);
+    }
+    word jmp(Buffer &buf, int32_t offset)
+    {
+        buf.write8(0xe9);
+        auto pos = buf.size();
+        buf.write32(disp32(offset));
+        return static_cast<word>(pos);
+    }
 
+    void backpatchImm32(Buffer &buf, size_t targetPos)
+    {
+        auto currentPos = buf.size();
+        auto relativePos = static_cast<int32_t>(currentPos - targetPos - sizeof(int32_t));
+        buf.writeAt32(targetPos, disp32(relativePos));
+    }
 } // namespace Emit
 
 namespace Compile
@@ -390,25 +425,29 @@ namespace Compile
         return list->asPair()->cdr->asPair()->car;
     }
 
-    int let(Buffer& buf, ASTNode* bindings, ASTNode* body, word stackIndex, const Env* bindingEnv, const Env* bodyEnv) {
-        if (bindings->isNil()) {
+    int let(Buffer &buf, ASTNode *bindings, ASTNode *body, word stackIndex, const Env *bindingEnv, const Env *bodyEnv)
+    {
+        if (bindings->isNil())
+        {
             // Base case: no bindings. Compile the body
             _(expr(buf, body, stackIndex, bodyEnv));
             return 0;
-        } else {
+        }
+        else
+        {
             assert(bindings->isPair());
             // Get the next binding
             auto pair = bindings->asPair();
             assert(pair->car->isPair());
-            auto binding = pair ->car->asPair();
+            auto binding = pair->car->asPair();
             auto name = binding->car;
             assert(name->isSymbol());
             auto bindingExpr = binding->cdr->asPair()->car;
-              // Compile the binding expression
+            // Compile the binding expression
             _(expr(buf, bindingExpr, stackIndex, bindingEnv));
             Emit::storeIndirectReg(buf, Emit::Indirect{Emit::Rbp, static_cast<int8_t>(stackIndex)}, Emit::Rax);
             // Bind the name
-            Env entry {name->asSymbol()->str, stackIndex, bodyEnv};
+            Env entry{name->asSymbol()->str, stackIndex, bodyEnv};
             // process the rest of bindings recursively
             _(let(buf, pair->cdr, body, stackIndex - WordSize, bindingEnv, &entry));
             return 0;
@@ -517,10 +556,12 @@ namespace Compile
                 Emit::shlRegImm8(buf, Emit::Rax, Objects::BoolShift);
                 Emit::orRegImm8(buf, Emit::Rax, Objects::BoolTag);
                 return 0;
-            } else if (symbol->str == "let") {
-                return let(buf, operand1(args), operand2(args), stackIndex, 
-                    varEnv, // binding env. 
-                    varEnv); // body env.
+            }
+            else if (symbol->str == "let")
+            {
+                return let(buf, operand1(args), operand2(args), stackIndex,
+                           varEnv,  // binding env.
+                           varEnv); // body env.
             }
         }
         assert(false && "unexpected call type");

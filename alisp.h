@@ -28,6 +28,8 @@ struct Buffer final
     void write8(uint8_t v);
     void write32(uint32_t v);
     void writeArray(const uint8_t array[], size_t size);
+    void writeAt32(size_t pos, uint32_t v);
+    size_t size() const;
 
     Code freeze() const;
 
@@ -202,6 +204,9 @@ namespace Emit
     void loadRegIndirect(Buffer& buf, Register dst, const Indirect& src);
     void addRegIndirect(Buffer& buf, Register dst, const Indirect& src);
     void cmpRegIndirect(Buffer& buf, Register left, const Indirect& right);
+    word jcc(Buffer& buf, Condition cond, int32_t offset);
+    word jmp(Buffer& buf, int32_t offset);
+    void backpatchImm32(Buffer &buf, size_t targetPos);
 } // namespace Emit
 
 namespace Compile
