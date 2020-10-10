@@ -223,9 +223,12 @@ bool ASTNode::isError() const
     return reinterpret_cast<uword>(this) == Objects::error();
 }
 
-std::optional<word> Env::find(const std::string_view& name) const {
-    for (auto env = this; env; env = env->prev) {
-        if (name == env->name) {
+std::optional<word> Env::find(const std::string_view &name) const
+{
+    for (auto env = this; env; env = env->prev)
+    {
+        if (name == env->name)
+        {
             return env->value;
         }
     }
@@ -380,7 +383,7 @@ namespace Compile
         return list->asPair()->cdr->asPair()->car;
     }
 
-    int call(Buffer &buf, ASTNode *callable, ASTNode *args, word stackIndex)
+    int call(Buffer &buf, ASTNode *callable, ASTNode *args, word stackIndex, const Env *varEnv)
     {
         // assert(args->asPair()->cdr == ASTNode::nil() && "Only unary function calls supported");
         if (callable->isSymbol())
@@ -388,82 +391,82 @@ namespace Compile
             auto symbol = callable->asSymbol();
             if (symbol->str == "add1")
             {
-                _(expr(buf, operand1(args), stackIndex));
+                _(expr(buf, operand1(args), stackIndex, varEnv));
                 Emit::addRegImm32(buf, Emit::Rax, static_cast<int32_t>(Objects::encodeInteger(1)));
                 return 0;
             }
             else if (symbol->str == "sub1")
             {
-                _(expr(buf, operand1(args), stackIndex));
+                _(expr(buf, operand1(args), stackIndex, varEnv));
                 Emit::addRegImm32(buf, Emit::Rax, static_cast<int32_t>(Objects::encodeInteger(-1)));
                 return 0;
             }
             else if (symbol->str == "integer->char")
             {
-                _(expr(buf, operand1(args), stackIndex));
+                _(expr(buf, operand1(args), stackIndex, varEnv));
                 Emit::shlRegImm8(buf, Emit::Rax, Objects::CharShift - Objects::IntegerShift);
                 Emit::orRegImm8(buf, Emit::Rax, static_cast<uint8_t>(Objects::CharTag));
                 return 0;
             }
             else if (symbol->str == "char->integer")
             {
-                _(expr(buf, operand1(args), stackIndex));
+                _(expr(buf, operand1(args), stackIndex, varEnv));
                 Emit::shrRegImm8(buf, Emit::Rax, Objects::CharShift - Objects::IntegerShift);
                 return 0;
             }
             else if (symbol->str == "nil?")
             {
-                _(expr(buf, operand1(args), stackIndex));
+                _(expr(buf, operand1(args), stackIndex, varEnv));
                 compareInt32(buf, static_cast<int32_t>(Objects::nil()));
                 return 0;
             }
             else if (symbol->str == "zero?")
             {
-                _(expr(buf, operand1(args), stackIndex));
+                _(expr(buf, operand1(args), stackIndex, varEnv));
                 compareInt32(buf, static_cast<int32_t>(Objects::encodeInteger(0)));
                 return 0;
             }
             else if (symbol->str == "not")
             {
-                _(expr(buf, operand1(args), stackIndex));
+                _(expr(buf, operand1(args), stackIndex, varEnv));
                 compareInt32(buf, static_cast<int32_t>(Objects::encodeBool(false)));
                 return 0;
             }
             else if (symbol->str == "integer?")
             {
-                _(expr(buf, operand1(args), stackIndex));
+                _(expr(buf, operand1(args), stackIndex, varEnv));
                 Emit::andRegImm8(buf, Emit::Rax, Objects::IntegerMask);
                 compareInt32(buf, Objects::IntegerTag);
                 return 0;
             }
             else if (symbol->str == "boolean?")
             {
-                _(expr(buf, operand1(args), stackIndex));
+                _(expr(buf, operand1(args), stackIndex, varEnv));
                 Emit::andRegImm8(buf, Emit::Rax, Objects::BoolTag);
                 compareInt32(buf, Objects::BoolTag);
                 return 0;
             }
             else if (symbol->str == "+")
             {
-                _(expr(buf, operand2(args), stackIndex));
+                _(expr(buf, operand2(args), stackIndex, varEnv));
                 Emit::storeIndirectReg(buf, Emit::Indirect{Emit::Rbp, static_cast<int8_t>(stackIndex)}, Emit::Rax);
-                _(expr(buf, operand1(args), stackIndex - WordSize));
+                _(expr(buf, operand1(args), stackIndex - WordSize, varEnv));
                 Emit::addRegIndirect(buf, Emit::Rax, Emit::Indirect{Emit::Rbp, static_cast<int8_t>(stackIndex)});
                 return 0;
             }
             else if (symbol->str == "-")
             {
-                _(expr(buf, operand2(args), stackIndex));
+                _(expr(buf, operand2(args), stackIndex, varEnv));
                 Emit::storeIndirectReg(buf, Emit::Indirect{Emit::Rbp, static_cast<int8_t>(stackIndex)}, Emit::Rax);
-                _(expr(buf, operand1(args), stackIndex - WordSize));
+                _(expr(buf, operand1(args), stackIndex - WordSize, varEnv));
                 Emit::subRegIndirect(buf, Emit::Rax, Emit::Indirect{Emit::Rbp, static_cast<int8_t>(stackIndex)});
                 return 0;
             }
             else if (symbol->str == "=")
             {
-                _(expr(buf, operand2(args), stackIndex));
+                _(expr(buf, operand2(args), stackIndex, varEnv));
                 Emit::storeIndirectReg(buf, Emit::Indirect{Emit::Rbp, static_cast<int8_t>(stackIndex)}, Emit::Rax);
-                _(expr(buf, operand1(args), stackIndex - WordSize));
+                _(expr(buf, operand1(args), stackIndex - WordSize, varEnv));
                 Emit::cmpRegIndirect(buf, Emit::Rax, Emit::Indirect{Emit::Rbp, static_cast<int8_t>(stackIndex)});
                 Emit::movRegImm32(buf, Emit::Rax, 0);
                 Emit::setccImm8(buf, Emit::Equal, Emit::Al);
@@ -473,9 +476,9 @@ namespace Compile
             }
             else if (symbol->str == "<")
             {
-                _(expr(buf, operand2(args), stackIndex));
+                _(expr(buf, operand2(args), stackIndex, varEnv));
                 Emit::storeIndirectReg(buf, Emit::Indirect{Emit::Rbp, static_cast<int8_t>(stackIndex)}, Emit::Rax);
-                _(expr(buf, operand1(args), stackIndex - WordSize));
+                _(expr(buf, operand1(args), stackIndex - WordSize, varEnv));
                 Emit::cmpRegIndirect(buf, Emit::Rax, Emit::Indirect{Emit::Rbp, static_cast<int8_t>(stackIndex)});
                 Emit::movRegImm32(buf, Emit::Rax, 0);
                 Emit::setccImm8(buf, Emit::Less, Emit::Al);
@@ -488,7 +491,7 @@ namespace Compile
         return -1;
     }
 
-    int expr(Buffer &buf, ASTNode *node, word stackIndex)
+    int expr(Buffer &buf, ASTNode *node, word stackIndex, const Env *varEnv)
     {
         if (node->isInteger())
         {
@@ -516,16 +519,16 @@ namespace Compile
         else if (node->isPair())
         {
             auto pair = node->asPair();
-            return call(buf, pair->car, pair->cdr, stackIndex);
+            return call(buf, pair->car, pair->cdr, stackIndex, varEnv);
         }
         assert(0 && "Unexpected node type");
         return -1;
     }
 
-    int function(Buffer &buf, ASTNode *node)
+    int function(Buffer &buf, ASTNode *node, const Env* varEnv)
     {
         buf.writeArray(FunctionPrologue, sizeof(FunctionPrologue));
-        _(expr(buf, node, -WordSize));
+        _(expr(buf, node, -WordSize, varEnv));
         buf.writeArray(FunctionEpilogue, sizeof(FunctionEpilogue));
 
         return 0;

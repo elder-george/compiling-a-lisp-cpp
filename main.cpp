@@ -28,7 +28,7 @@ int repl()
         }
         // Compile the line
         Buffer buf;
-        auto result = Compile::expr(buf, node.get(), -WordSize);
+        auto result = Compile::expr(buf, node.get(), -WordSize, nullptr);
         if (result != 0)
         {
             fmt::print(cerr, "Compile error\n");
