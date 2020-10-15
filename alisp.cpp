@@ -624,6 +624,18 @@ namespace Compile
                             stackIndex,
                             varEnv);
             }
+            else if (symbol->str == "car")
+            {
+                _(expr(buf, operand1(args), stackIndex, varEnv));
+                Emit::loadRegIndirect(buf, Emit::Rax, Emit::Indirect{Emit::Rax, static_cast<int8_t>(Objects::CarOffset - Objects::PairTag)});
+                return 0;
+            }
+            else if (symbol->str == "cdr")
+            {
+                _(expr(buf, operand1(args), stackIndex, varEnv));
+                Emit::loadRegIndirect(buf, Emit::Rax, Emit::Indirect{Emit::Rax, static_cast<int8_t>(Objects::CdrOffset - Objects::PairTag)});
+                return 0;
+            }
         }
         assert(false && "unexpected call type");
         return -1;
