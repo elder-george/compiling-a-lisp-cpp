@@ -487,6 +487,56 @@ TEST_CASE("if with false cond", "[compiler]")
     REQUIRE(2 == Objects::decodeInteger(result));
 }
 
+TEST_CASE("compile cons", "[compiler]")
+{
+    Buffer buf;
+    auto node = Reader::read("(cons 1 2)");
+    auto compileResult = Compile::function(buf, node.get());
+    REQUIRE(0 == compileResult);
+
+    std::vector<uint8_t> expected = {
+        0x48, 0x89, 0xce,
+        0x55,
+        0x48, 0x89, 0xe5,
+        0x48, 0xc7, 0xc0, 0x04, 0x00, 0x00, 0x00, // mov rax, 0x2
+        0x48, 0x89, 0x45, 0xf8,                   // mov [rbp-8], rax
+        0x48, 0xc7, 0xc0, 0x08, 0x00, 0x00, 0x00, // mov rax, 0x4
+        0x48, 0x89, 0x46, 0x08,                   // mov [rsi+Cdr], rax
+        0x48, 0x8b, 0x45, 0xf8,                   // mov rax, [rbp-8]
+        0x48, 0x89, 0x46, 0x00,                   // mov [rsi+Car], rax
+        0x48, 0x89, 0xf0,                         // mov rax, rsi
+        0x48, 0x83, 0xc8, 0x01,                   // or rax, kPairTag
+        0x48, 0x81, 0xc6, 0x10, 0x00, 0x00, 0x00, // add rsi, 2*kWordSize
+        0x5d,
+        0xc3};
+    REQUIRE(expected == buf._buf);
+    auto code = buf.freeze();
+    auto heap = std::vector<uword>(64);
+    auto result = code.toFunc<ASTNode *(uint64_t *)>()(heap.data());
+    REQUIRE(result->isPair());
+    REQUIRE(1 == result->asPair()->car->getInteger());
+    REQUIRE(2 == result->asPair()->cdr->getInteger());
+    REQUIRE(heap.at(0) == Objects::encodeInteger(1));
+    REQUIRE(heap.at(1) == Objects::encodeInteger(2));
+}
+
+TEST_CASE("Compile nested cons", "[compiler]")
+{
+    Buffer buf;
+    auto node = Reader::read("(cons (cons 1 2) (cons 3 4))");
+    auto compileResult = Compile::function(buf, node.get());
+    REQUIRE(compileResult == 0);
+    auto code = buf.freeze();
+    auto heap = std::vector<uword>(64);
+    auto result = code.toFunc<ASTNode *(uword *)>()(heap.data());
+    REQUIRE(result->isPair());
+    REQUIRE(result->asPair()->car->isPair());
+    REQUIRE(result->asPair()->car->asPair()->car->getInteger() == 1);
+    REQUIRE(result->asPair()->car->asPair()->cdr->getInteger() == 2);
+    REQUIRE(result->asPair()->cdr->isPair());
+    REQUIRE(result->asPair()->cdr->asPair()->car->getInteger() == 3);
+    REQUIRE(result->asPair()->cdr->asPair()->cdr->getInteger() == 4);
+}
 TEST_CASE("Read with unsigned integer returns integer", "[reader]")
 {
     auto node = Reader::read("1234");

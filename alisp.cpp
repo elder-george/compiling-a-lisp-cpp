@@ -480,6 +480,26 @@ namespace Compile
         return 0;
     }
 
+    constexpr Emit::Register HeapPointer = Emit::Rsi;
+
+    int cons(Buffer &buf, ASTNode *car, ASTNode *cdr, word stackIndex, const Env *varEnv)
+    {
+        // Compile and store car on the stack
+        _(expr(buf, car, stackIndex, varEnv));
+        Emit::storeIndirectReg(buf, Emit::Indirect{Emit::Rbp, static_cast<int8_t>(stackIndex)}, Emit::Rax);
+        // Compile and store cdr
+        _(expr(buf, cdr, stackIndex - WordSize, varEnv));
+        Emit::storeIndirectReg(buf, Emit::Indirect{HeapPointer, Objects::CdrOffset}, Emit::Rax);
+        Emit::loadRegIndirect(buf, Emit::Rax, Emit::Indirect{Emit::Rbp, static_cast<int8_t>(stackIndex)});
+        Emit::storeIndirectReg(buf, Emit::Indirect{HeapPointer, Objects::CarOffset}, Emit::Rax);
+        // Store tagged pointer in rax
+        Emit::movRegReg(buf, Emit::Rax, HeapPointer);
+        Emit::orRegImm8(buf, Emit::Rax, Objects::PairTag);
+        // bump the heap pointer
+        Emit::addRegImm32(buf, HeapPointer, Objects::PairSize);
+        return 0;
+    }
+
     int call(Buffer &buf, ASTNode *callable, ASTNode *args, word stackIndex, const Env *varEnv)
     {
         // assert(args->asPair()->cdr == ASTNode::nil() && "Only unary function calls supported");
@@ -595,6 +615,14 @@ namespace Compile
                            operand2(args),      // on true
                            operand3(args),      // on false
                            stackIndex, varEnv);
+            }
+            else if (symbol->str == "cons")
+            {
+                return cons(buf,
+                            operand1(args), // car
+                            operand2(args), // cdr,
+                            stackIndex,
+                            varEnv);
             }
         }
         assert(false && "unexpected call type");

@@ -71,6 +71,12 @@ namespace Objects
 
     constexpr unsigned int ErrorTag = 0b0011'1111;
 
+    constexpr int CarIndex = 0;
+    constexpr int8_t CarOffset = CarIndex * WordSize;
+    constexpr int CdrIndex = CarIndex + 1;
+    constexpr int8_t CdrOffset = CdrIndex * WordSize;
+    constexpr int PairSize = CdrOffset + WordSize;
+
     word encodeInteger(word value);
     word decodeInteger(word value);
 
