@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.5)
 project(alisp CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-add_definitions( "/W3 /D_CRT_SECURE_NO_WARNINGS /wd4005 /wd4996 /nologo" )
+add_definitions( "/W3 /D_CRT_SECURE_NO_WARNINGS /wd4005 /wd4996 /wd4309 /nologo" )
 
 find_package(fmt CONFIG REQUIRED)
 

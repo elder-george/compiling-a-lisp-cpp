@@ -5,7 +5,7 @@
 #include <string>
 #include <optional>
 
-using JitFunction = int (*)();
+using JitFunction = int (*)(uint64_t*);
 
 struct Code final
 {

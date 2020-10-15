@@ -502,7 +502,6 @@ namespace Compile
 
     int call(Buffer &buf, ASTNode *callable, ASTNode *args, word stackIndex, const Env *varEnv)
     {
-        // assert(args->asPair()->cdr == ASTNode::nil() && "Only unary function calls supported");
         if (callable->isSymbol())
         {
             auto symbol = callable->asSymbol();
