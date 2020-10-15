@@ -268,7 +268,7 @@ namespace Emit
         }
         else
         {
-            buf.write8(0x83);
+            buf.write8(0x81);
             buf.write8(0xc0 | dst);
         }
         buf.write32(src);
