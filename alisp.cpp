@@ -252,6 +252,12 @@ namespace Emit
 {
     constexpr uint8_t RexPrefix = 0x48;
 
+    void movRegReg(Buffer &buf, Register dst, Register src)
+    {
+        buf.write8(RexPrefix);
+        buf.write8(0x89);
+        buf.write8(0xc0 | (src << 3) | dst);
+    }
     void movRegImm32(Buffer &buf, Register dst, int32_t src)
     {
         buf.write8(RexPrefix);
