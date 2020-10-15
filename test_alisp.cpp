@@ -58,6 +58,7 @@ TEST_CASE("Compile positive integer", "[compiler]")
     REQUIRE(compileResult == 0);
 
     std::vector<uint8_t> expected = {
+        0x48, 0x89, 0xce,                         // mov esi, rcx
         0x55,                                     // push rbp
         0x48, 0x89, 0xe5,                         // mov rbp, rsp
         0x48, 0xc7, 0xc0, 0xec, 0x01, 0x00, 0x00, // mov eax, 123
@@ -80,6 +81,7 @@ TEST_CASE("Compile negative integer", "[compiler]")
     REQUIRE(compileResult == 0);
 
     std::vector<uint8_t> expected = {
+        0x48, 0x89, 0xce, // mov esi, rcx
         0x55,
         0x48, 0x89, 0xe5,
         0x48, 0xc7, 0xc0, 0x14, 0xfe, 0xff, 0xff, // mov rax, -123
@@ -101,6 +103,7 @@ TEST_CASE("Compile char", "[compiler]")
     REQUIRE(compileResult == 0);
 
     std::vector<uint8_t> expected{
+        0x48, 0x89, 0xce, // mov esi, rcx
         0x55,
         0x48, 0x89, 0xe5,
         0x48, 0xc7, 0xc0, 0x0f, 0x61, 0x00, 0x00,
@@ -122,6 +125,7 @@ TEST_CASE("Compile true", "[compiler]")
     REQUIRE(compileResult == 0);
 
     std::vector<uint8_t> expected{
+        0x48, 0x89, 0xce, // mov esi, rcx
         0x55,             // push rbp
         0x48, 0x89, 0xe5, // mov rbp, rsp
         0x48, 0xc7, 0xc0, 0x9f, 0x0, 0x0, 0x0,
@@ -143,6 +147,7 @@ TEST_CASE("Compile false", "[compiler]")
     REQUIRE(compileResult == 0);
 
     std::vector<uint8_t> expected{
+        0x48, 0x89, 0xce, // mov esi, rcx
         0x55,             // push rbp
         0x48, 0x89, 0xe5, // mov rbp, rsp
         0x48, 0xc7, 0xc0, 0x1f, 0x00, 0x00, 0x00,
@@ -161,6 +166,7 @@ TEST_CASE("Compile nil", "[compiler]")
     auto compileResult = Compile::function(buf, ASTNode::nil());
     REQUIRE(compileResult == 0);
     std::vector<uint8_t> expected = {
+        0x48, 0x89, 0xce, // mov esi, rcx
         0x55,             // push rbp
         0x48, 0x89, 0xe5, // mov rbp, rsp
         0x48, 0xc7, 0xc0, 0x2f, 0x00, 0x00, 0x00,
@@ -192,6 +198,7 @@ TEST_CASE("Compile unary add1", "[compiler]")
     REQUIRE(0 == Compile::function(buf, node.get()));
 
     std::vector<uint8_t> expected{
+        0x48, 0x89, 0xce,
         0x55,                                     // push rbp
         0x48, 0x89, 0xe5,                         // mov rbp, rsp
         0x48, 0xc7, 0xc0, 0xec, 0x01, 0x00, 0x00, // mov rax, imm(123)
@@ -212,6 +219,7 @@ TEST_CASE("Compile unary add1 nested", "[compiler]")
 
     REQUIRE(0 == Compile::function(buf, node.get()));
     std::vector<uint8_t> expected{
+        0x48, 0x89, 0xce,
         0x55,                                     // push rbp
         0x48, 0x89, 0xe5,                         // mov rbp, rsp
         0x48, 0xc7, 0xc0, 0xec, 0x01, 0x00, 0x00, // mov rax, imm(123)
@@ -231,6 +239,7 @@ TEST_CASE("compile boolean? with non-boolean returns false", "[compiler]")
     auto node = makeUnaryCall("boolean?", ASTNode::newInteger(5));
     REQUIRE(0 == Compile::function(buf, node.get()));
     std::vector<uint8_t> expected{
+        0x48, 0x89, 0xce,
         0x55,
         0x48, 0x89, 0xe5,
         0x48, 0xc7, 0xc0, 0x14, 0x00, 0x00, 0x00, // mov    rax,0x14
@@ -253,6 +262,7 @@ TEST_CASE("compile boolean? with true returns true", "[compiler]")
     auto node = makeUnaryCall("boolean?", ASTNode::newBool(true));
     REQUIRE(0 == Compile::function(buf, node.get()));
     std::vector<uint8_t> expected{
+        0x48, 0x89, 0xce,
         0x55,
         0x48, 0x89, 0xe5,
         0x48, 0xc7, 0xc0, 0x9f, 0x00, 0x00, 0x00, // mov    rax,0x9f
@@ -275,6 +285,7 @@ TEST_CASE("compile boolean? with false returns true", "[compiler]")
     auto node = makeUnaryCall("boolean?", ASTNode::newBool(false));
     REQUIRE(0 == Compile::function(buf, node.get()));
     std::vector<uint8_t> expected{
+        0x48, 0x89, 0xce,
         0x55,
         0x48, 0x89, 0xe5,
         0x48, 0xc7, 0xc0, 0x1f, 0x00, 0x00, 0x00, // mov    rax,0x1f
@@ -302,6 +313,7 @@ TEST_CASE("Compile binary +", "[compiler]")
     auto node = makeBinaryCall("+", ASTNode::newInteger(5), ASTNode::newInteger(8));
     REQUIRE(0 == Compile::function(buf, node.get()));
     std::vector<uint8_t> expected{
+        0x48, 0x89, 0xce,
         0x55,
         0x48, 0x89, 0xe5,
         0x48, 0xc7, 0xc0, 0x20, 0x00, 0x00, 0x00, // mov    rax,0x20
@@ -321,6 +333,7 @@ TEST_CASE("Compile binary -", "[compiler]")
     auto node = makeBinaryCall("-", ASTNode::newInteger(5), ASTNode::newInteger(8));
     REQUIRE(0 == Compile::function(buf, node.get()));
     std::vector<uint8_t> expected{
+        0x48, 0x89, 0xce,
         0x55,
         0x48, 0x89, 0xe5,
         0x48, 0xc7, 0xc0, 0x20, 0x00, 0x00, 0x00, // mov    rax,0x20
@@ -430,6 +443,7 @@ TEST_CASE("if with true cond", "[compiler]")
     REQUIRE(0 == compileResult);
 
     std::vector<uint8_t> expected = {
+        0x48, 0x89, 0xce,
         0x55,
         0x48, 0x89, 0xe5,
         0x48, 0xc7, 0xc0, 0x9f, 0x00, 0x00, 0x00, // mov rax, 0x9f
@@ -455,6 +469,7 @@ TEST_CASE("if with false cond", "[compiler]")
     REQUIRE(0 == compileResult);
 
     std::vector<uint8_t> expected = {
+        0x48, 0x89, 0xce,
         0x55,
         0x48, 0x89, 0xe5,
         0x48, 0xc7, 0xc0, 0x1f, 0x00, 0x00, 0x00, // mov rax, 0x1f

@@ -391,8 +391,10 @@ namespace Emit
 namespace Compile
 {
     static const uint8_t FunctionPrologue[] = {
-        0x55,                       // push rbp
-        Emit::RexPrefix, 0x89, 0xe5 // mov rbp, rsp
+        // Win64 ABI passes first arg in ecx, not edi like UNIXes do
+        Emit::RexPrefix, 0x89, 0xce, //  mov esi, ecx
+        0x55,                        // push rbp
+        Emit::RexPrefix, 0x89, 0xe5, // mov rbp, rsp
     };
     static const uint8_t FunctionEpilogue[] = {
         0x5d, // pop rbp
