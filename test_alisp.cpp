@@ -527,7 +527,7 @@ TEST_CASE("Compile two cons", "[compiler]")
     REQUIRE(0 == Compile::function(buf, node.get()));
     auto code = buf.freeze();
     uword heap[64];
-    auto result = code.toFunc<ASTNode*(uword*)>()(heap);
+    auto result = code.toFunc<ASTNode *(uword *)>()(heap);
     REQUIRE(result->isPair());
     REQUIRE(2 == result->asPair()->car->getInteger());
     REQUIRE(4 == result->asPair()->cdr->getInteger());
