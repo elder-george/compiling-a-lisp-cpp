@@ -217,8 +217,9 @@ namespace Emit
 
 namespace Compile
 {
-    int expr(Buffer &buf, ASTNode *node, word stackIndex, const Env* varEnv);
+    int expr(Buffer &buf, ASTNode *node, word stackIndex, const Env* varEnv, const Env* labels);
     int function(Buffer &buf, ASTNode *node);
+    int code(Buffer &buf, ASTNode *code, Env *labels);
 } // namespace Compile
 
 namespace Reader{

@@ -537,6 +537,127 @@ TEST_CASE("Compile cdr", "[compiler]")
     REQUIRE(heap.at(1) == Objects::encodeInteger(2));
 }
 
+TEST_CASE("Compile code with one param", "[compiler]")
+{
+    Buffer buf;
+    auto node = Reader::read("(code (x) x)");
+    REQUIRE(0 == Compile::code(buf, node.get(), nullptr));
+    std::vector<uint8_t> expected{
+        0x48, 0x8b, 0x44, 0x24, 0xf8, // mov rax, [rsp-8]
+        0xc3                          // ret
+    };
+    REQUIRE(expected == buf._buf);
+}
+
+TEST_CASE("Compile code with two params", "[compiler]")
+{
+    Buffer buf;
+    auto node = Reader::read("(code (x y) (+ x y))");
+    REQUIRE(0 == Compile::code(buf, node.get(), nullptr));
+    std::vector<uint8_t> expected{
+        0x48, 0x8b, 0x44, 0x24, 0xf0, // mov rax, [rsp-16]
+        0x48, 0x89, 0x44, 0x24, 0xe8, // mov [rsp-24], rax
+        0x48, 0x8b, 0x44, 0x24, 0xf8, // mov rax, [rsp-8]
+        0x48, 0x03, 0x44, 0x24, 0xe8, // add rax, [rsp-24]
+        0xc3,                         // ret
+    };
+    REQUIRE(expected == buf._buf);
+}
+
+TEST_CASE("Compile labels with one label", "[compiler]")
+{
+    Buffer buf;
+    auto node = Reader::read("(labels ((const (code () 5))) 1)");
+    REQUIRE(0 == Compile::function(buf, node.get()));
+
+    std::vector<uint8_t> expected = {
+        0x48, 0x89, 0xce,
+        0xe9, 0x08, 0x00, 0x00, 0x00,             // jmp 0x08
+        0x48, 0xc7, 0xc0, 0x14, 0x00, 0x00, 0x00, // mov rax, compile(5)
+        0xc3,                                     // ret
+        0x48, 0xc7, 0xc0, 0x04, 0x00, 0x00, 0x00, // mov rax, 0x2
+        0xc3,                                     // ret
+    };
+    REQUIRE(expected == buf._buf);
+    auto code = buf.freeze();
+    uword heap[64];
+    auto result = code.toFunc<ASTNode *(uint64_t *)>()(heap);
+    REQUIRE(1 == result->getInteger());
+}
+
+TEST_CASE("Compile labelcall with one param", "[compiler]")
+{
+    Buffer buf;
+    auto node = Reader::read("(labels ((id (code (x) x))) (labelcall id 5))");
+    REQUIRE(0 == Compile::function(buf, node.get()));
+    std::vector<uint8_t> expected = {
+        0x48, 0x89, 0xce,
+        0xe9, 0x06, 0x00, 0x00, 0x00,             // jmp 0x06
+        0x48, 0x8b, 0x44, 0x24, 0xf8,             // mov rax, [rsp-8]
+        0xc3,                                     // ret
+        0x48, 0xc7, 0xc0, 0x14, 0x00, 0x00, 0x00, // mov rax, compile(5)
+        0x48, 0x89, 0x44, 0x24, 0xf0,             // mov [rsp-16], rax
+        0xe8, 0xe9, 0xff, 0xff, 0xff,             // call `id`
+        0xc3,                                     // ret
+    };
+    auto code = buf.freeze();
+    uword heap[64];
+    auto result = code.toFunc<ASTNode *(uint64_t *)>()(heap);
+    REQUIRE(5 == result->getInteger());
+}
+
+TEST_CASE("Compile labelcall with one param and locals", "[compiler]")
+{
+    Buffer buf;
+    auto node = Reader::read("(labels ((id (code (x) x))) (let ((a 1)) (labelcall id 5)))");
+    REQUIRE(0 == Compile::function(buf, node.get()));
+    std::vector<uint8_t> expected = {
+        0x48, 0x89, 0xce,
+        0xe9, 0x06, 0x00, 0x00, 0x00,             // jmp 0x06
+        0x48, 0x8b, 0x44, 0x24, 0xf8,             // mov rax, [rsp-8]
+        0xc3,                                     // ret
+        0x48, 0xc7, 0xc0, 0x04, 0x00, 0x00, 0x00, // mov rax, compile(1)
+        0x48, 0x89, 0x44, 0x24, 0xf8,             // mov [rsp-8], rax
+        0x48, 0xc7, 0xc0, 0x14, 0x00, 0x00, 0x00, // mov rax, compile(5)
+        0x48, 0x89, 0x44, 0x24, 0xe8,             // mov [rsp-24], rax
+        0x48, 0x81, 0xec, 0x08, 0x00, 0x00, 0x00, // sub rsp, 8
+        0xe8, 0xd6, 0xff, 0xff, 0xff,             // call `id`
+        0x48, 0x81, 0xc4, 0x08, 0x00, 0x00, 0x00, // add rsp, 8
+        0xc3,                                     // ret
+    };
+    REQUIRE(expected == buf._buf);
+    auto code = buf.freeze();
+    uword heap[64];
+    auto result = code.toFunc<ASTNode *(uint64_t *)>()(heap);
+    REQUIRE(5 == result->getInteger());
+}
+
+TEST_CASE("Compile multilevel labelcall", "[compiler]")
+{
+    Buffer buf;
+    auto node = Reader::read("(labels ((add (code (x y) (+ x y)))"
+                             "         (add2 (code (x y) (labelcall add x y))))"
+                             "    (labelcall add2 1 2))");
+    REQUIRE(0 == Compile::function(buf, node.get()));
+    auto code = buf.freeze();
+    uword heap[64];
+    auto result = code.toFunc<ASTNode *(uint64_t *)>()(heap);
+    REQUIRE(3 == result->getInteger());
+}
+
+TEST_CASE("Compile factorial labelcall", "[compiler]")
+{
+    Buffer buf;
+    auto node = Reader::read("(labels ((factorial (code (x) "
+                             "            (if (< x 2) 1 (* x (labelcall factorial (- x 1)))))))"
+                             "    (labelcall factorial 5))");
+    REQUIRE(0 == Compile::function(buf, node.get()));
+    auto code = buf.freeze();
+    uword heap[64];
+    auto result = code.toFunc<ASTNode *(uint64_t *)>()(heap);
+    REQUIRE(120 == result->getInteger());
+}
+
 TEST_CASE("Read with unsigned integer returns integer", "[reader]")
 {
     auto node = Reader::read("1234");

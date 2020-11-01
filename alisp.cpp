@@ -806,11 +806,11 @@ namespace Compile
         return -1;
     }
 
-    int codeImpl(Buffer &buf, ASTNode *formals, ASTNode *body, word stackIndex, Env *varEnv)
+    int codeImpl(Buffer &buf, ASTNode *formals, ASTNode *body, word stackIndex, Env *varEnv, Env* labels)
     {
         if (formals->isNil())
         {
-            _(expr(buf, body, stackIndex, varEnv, nullptr));
+            _(expr(buf, body, stackIndex, varEnv, labels));
             buf.writeArray(FunctionEpilogue, sizeof(FunctionEpilogue));
             return 0;
         }
@@ -818,7 +818,7 @@ namespace Compile
         auto name = formals->asPair()->car;
         assert(name->isSymbol());
         auto entry = Env{name->asSymbol()->str, stackIndex, varEnv};
-        return codeImpl(buf, formals->asPair()->cdr, body, stackIndex - WordSize, &entry);
+        return codeImpl(buf, formals->asPair()->cdr, body, stackIndex - WordSize, &entry, labels);
     }
 
     int code(Buffer &buf, ASTNode *code, Env *labels)
@@ -831,7 +831,7 @@ namespace Compile
         auto formals = operand1(args);
         auto codeBody = operand2(args);
         // Formals are laid out before the function frame, so their offsets from RSP are positive
-        return codeImpl(buf, formals, codeBody, -WordSize, nullptr);
+        return codeImpl(buf, formals, codeBody, -WordSize, nullptr, labels);
     }
 
     int labels(Buffer &buf, ASTNode *bindings, ASTNode *body, Env *labelEnv, word bodyPos)
@@ -841,6 +841,7 @@ namespace Compile
             Emit::backpatchImm32(buf, bodyPos);
             // Base case: no bindings. Compile the body
             _(expr(buf, body, -WordSize, nullptr, labelEnv));
+            buf.writeArray(FunctionEpilogue, sizeof(FunctionEpilogue));
             return 0;
         }
         assert(bindings->isPair());
