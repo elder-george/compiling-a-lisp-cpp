@@ -281,6 +281,22 @@ namespace Emit
         return ((scale & 0x3) << 6) | ((index & 0x7) << 3) | (base & 0x7);
     }
 
+    static uint8_t disp8(int8_t disp) { return disp >= 0 ? disp : 0x100 + disp; }
+    static uint32_t disp32(int32_t disp) { return disp >= 0 ? disp : static_cast<uint32_t>(0x1'0000'0000 + disp); }
+    static void addressDisp8(Buffer &buf, Register direct, const Indirect &indirect)
+    {
+        if (indirect.reg == Rsp)
+        {
+            buf.write8(modrm(1, IndexNone, direct));
+            buf.write8(sib(Rsp, IndexNone, Scale1));
+        }
+        else
+        {
+            buf.write8(modrm(1, indirect.reg, direct));
+        }
+        buf.write8(disp8(indirect.disp));
+    }
+
     void movRegReg(Buffer &buf, Register dst, Register src)
     {
         buf.write8(RexPrefix);
@@ -321,6 +337,12 @@ namespace Emit
             buf.write8(0xe8 | dst);
         }
         buf.write32(src);
+    }
+    void mulRegIndirect(Buffer &buf, const Indirect &src)
+    {
+        buf.write8(RexPrefix);
+        buf.write8(0xf7);
+        addressDisp8(buf, static_cast<Register>(4), src);
     }
     void shlRegImm8(Buffer &buf, Register dst, uint8_t src)
     {
@@ -373,23 +395,6 @@ namespace Emit
     void ret(Buffer &buf)
     {
         buf.write8(0xc3);
-    }
-
-    static uint8_t disp8(int8_t disp) { return disp >= 0 ? disp : 0x100 + disp; }
-    static uint32_t disp32(int32_t disp) { return disp >= 0 ? disp : static_cast<uint32_t>(0x1'0000'0000 + disp); }
-
-    void addressDisp8(Buffer &buf, Register direct, const Indirect &indirect)
-    {
-        if (indirect.reg == Rsp)
-        {
-            buf.write8(modrm(1, IndexNone, direct));
-            buf.write8(sib(Rsp, IndexNone, Scale1));
-        }
-        else
-        {
-            buf.write8(modrm(1, indirect.reg, direct));
-        }
-        buf.write8(disp8(indirect.disp));
     }
 
     void storeIndirectReg(Buffer &buf, const Indirect &dst, const Register src)
@@ -668,6 +673,17 @@ namespace Compile
                 Emit::storeIndirectReg(buf, Emit::Indirect{Emit::Rsp, static_cast<int8_t>(stackIndex)}, Emit::Rax);
                 _(expr(buf, operand1(args), stackIndex - WordSize, varEnv, labels));
                 Emit::subRegIndirect(buf, Emit::Rax, Emit::Indirect{Emit::Rsp, static_cast<int8_t>(stackIndex)});
+                return 0;
+            }
+            else if (symbol->str == "*")
+            {
+                _(expr(buf, operand2(args), stackIndex, varEnv, labels));
+                // Remove the tag so that the result is still only tagged with 0b00
+                // instead of 0b0000
+                Emit::shrRegImm8(buf, Emit::Rax, static_cast<int8_t>(Objects::IntegerShift));
+                Emit::storeIndirectReg(buf, Emit::Indirect{Emit::Rsp, static_cast<int8_t>(stackIndex)}, Emit::Rax);
+                _(expr(buf, operand1(args), stackIndex - WordSize, varEnv, labels));
+                Emit::mulRegIndirect(buf, Emit::Indirect{Emit::Rsp, static_cast<int8_t>(stackIndex)});
                 return 0;
             }
             else if (symbol->str == "=")
