@@ -934,6 +934,7 @@ namespace Reader
             case '-':
             case '*':
             case '>':
+            case '<':
             case '=':
             case '?':
                 return true;
