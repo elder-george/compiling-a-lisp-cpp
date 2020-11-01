@@ -59,10 +59,7 @@ TEST_CASE("Compile positive integer", "[compiler]")
 
     std::vector<uint8_t> expected = {
         0x48, 0x89, 0xce,                         // mov esi, rcx
-        0x55,                                     // push rbp
-        0x48, 0x89, 0xe5,                         // mov rbp, rsp
         0x48, 0xc7, 0xc0, 0xec, 0x01, 0x00, 0x00, // mov eax, 123
-        0x5d,                                     // pop rbp
         0xc3                                      // ret
     };
     REQUIRE(expected == buf._buf);
@@ -81,12 +78,9 @@ TEST_CASE("Compile negative integer", "[compiler]")
     REQUIRE(compileResult == 0);
 
     std::vector<uint8_t> expected = {
-        0x48, 0x89, 0xce, // mov esi, rcx
-        0x55,
-        0x48, 0x89, 0xe5,
+        0x48, 0x89, 0xce,                         // mov esi, rcx
         0x48, 0xc7, 0xc0, 0x14, 0xfe, 0xff, 0xff, // mov rax, -123
-        0x5d,
-        0xc3 // ret
+        0xc3                                      // ret
     };
     REQUIRE(expected == buf._buf);
 
@@ -104,10 +98,7 @@ TEST_CASE("Compile char", "[compiler]")
 
     std::vector<uint8_t> expected{
         0x48, 0x89, 0xce, // mov esi, rcx
-        0x55,
-        0x48, 0x89, 0xe5,
         0x48, 0xc7, 0xc0, 0x0f, 0x61, 0x00, 0x00,
-        0x5d,
         0xc3};
     REQUIRE(expected == buf._buf);
 
@@ -126,10 +117,7 @@ TEST_CASE("Compile true", "[compiler]")
 
     std::vector<uint8_t> expected{
         0x48, 0x89, 0xce, // mov esi, rcx
-        0x55,             // push rbp
-        0x48, 0x89, 0xe5, // mov rbp, rsp
         0x48, 0xc7, 0xc0, 0x9f, 0x0, 0x0, 0x0,
-        0x5d,
         0xc3};
     REQUIRE(expected == buf._buf);
 
@@ -148,10 +136,7 @@ TEST_CASE("Compile false", "[compiler]")
 
     std::vector<uint8_t> expected{
         0x48, 0x89, 0xce, // mov esi, rcx
-        0x55,             // push rbp
-        0x48, 0x89, 0xe5, // mov rbp, rsp
         0x48, 0xc7, 0xc0, 0x1f, 0x00, 0x00, 0x00,
-        0x5d,
         0xc3};
     REQUIRE(expected == buf._buf);
 
@@ -167,10 +152,7 @@ TEST_CASE("Compile nil", "[compiler]")
     REQUIRE(compileResult == 0);
     std::vector<uint8_t> expected = {
         0x48, 0x89, 0xce, // mov esi, rcx
-        0x55,             // push rbp
-        0x48, 0x89, 0xe5, // mov rbp, rsp
         0x48, 0xc7, 0xc0, 0x2f, 0x00, 0x00, 0x00,
-        0x5d,
         0xc3};
 
     REQUIRE(expected == buf._buf);
@@ -199,11 +181,8 @@ TEST_CASE("Compile unary add1", "[compiler]")
 
     std::vector<uint8_t> expected{
         0x48, 0x89, 0xce,
-        0x55,                                     // push rbp
-        0x48, 0x89, 0xe5,                         // mov rbp, rsp
         0x48, 0xc7, 0xc0, 0xec, 0x01, 0x00, 0x00, // mov rax, imm(123)
         0x48, 0x05, 0x04, 0x00, 0x00, 0x00,       // add rax, imm(1)
-        0x5d,                                     // pop rbp
         0xc3                                      // ret
     };
     REQUIRE(expected == buf._buf);
@@ -220,12 +199,9 @@ TEST_CASE("Compile unary add1 nested", "[compiler]")
     REQUIRE(0 == Compile::function(buf, node.get()));
     std::vector<uint8_t> expected{
         0x48, 0x89, 0xce,
-        0x55,                                     // push rbp
-        0x48, 0x89, 0xe5,                         // mov rbp, rsp
         0x48, 0xc7, 0xc0, 0xec, 0x01, 0x00, 0x00, // mov rax, imm(123)
         0x48, 0x05, 0x04, 0x00, 0x00, 0x00,       // add rax, imm(1)
         0x48, 0x05, 0x04, 0x00, 0x00, 0x00,       // add rax, imm(1)
-        0x5d,                                     // pop rbp
         0xc3};                                    // ret
     REQUIRE(expected == buf._buf);
 
@@ -240,8 +216,6 @@ TEST_CASE("compile boolean? with non-boolean returns false", "[compiler]")
     REQUIRE(0 == Compile::function(buf, node.get()));
     std::vector<uint8_t> expected{
         0x48, 0x89, 0xce,
-        0x55,
-        0x48, 0x89, 0xe5,
         0x48, 0xc7, 0xc0, 0x14, 0x00, 0x00, 0x00, // mov    rax,0x14
         0x48, 0x83, 0xe0, 0x1f,                   // and    rax,0x3f // a typo?
         0x48, 0x3d, 0x1f, 0x00, 0x00, 0x00,       // cmp    rax,0x0000001f
@@ -249,7 +223,6 @@ TEST_CASE("compile boolean? with non-boolean returns false", "[compiler]")
         0x0f, 0x94, 0xc0,                         // sete   al
         0x48, 0xc1, 0xe0, 0x07,                   // shl    rax,0x7
         0x48, 0x83, 0xc8, 0x1f,                   // or     rax,0x1f
-        0x5d,
         0xc3};
     REQUIRE(expected == buf._buf);
     auto code = buf.freeze();
@@ -263,8 +236,6 @@ TEST_CASE("compile boolean? with true returns true", "[compiler]")
     REQUIRE(0 == Compile::function(buf, node.get()));
     std::vector<uint8_t> expected{
         0x48, 0x89, 0xce,
-        0x55,
-        0x48, 0x89, 0xe5,
         0x48, 0xc7, 0xc0, 0x9f, 0x00, 0x00, 0x00, // mov    rax,0x9f
         0x48, 0x83, 0xe0, 0x1f,                   // and    rax,0x1f
         0x48, 0x3d, 0x1f, 0x00, 0x00, 0x00,       // cmp    rax,0x0000001f
@@ -272,8 +243,7 @@ TEST_CASE("compile boolean? with true returns true", "[compiler]")
         0x0f, 0x94, 0xc0,                         // sete   al
         0x48, 0xc1, 0xe0, 0x07,                   // shl    rax,0x7
         0x48, 0x83, 0xc8, 0x1f,                   //  or     rax,0x1f
-        0x5d,
-        0xc3}; // ret
+        0xc3};                                    // ret
     REQUIRE(expected == buf._buf);
     auto code = buf.freeze();
     REQUIRE(code.toFunc<int()>()() == Objects::encodeBool(true));
@@ -286,8 +256,6 @@ TEST_CASE("compile boolean? with false returns true", "[compiler]")
     REQUIRE(0 == Compile::function(buf, node.get()));
     std::vector<uint8_t> expected{
         0x48, 0x89, 0xce,
-        0x55,
-        0x48, 0x89, 0xe5,
         0x48, 0xc7, 0xc0, 0x1f, 0x00, 0x00, 0x00, // mov    rax,0x1f
         0x48, 0x83, 0xe0, 0x1f,                   // and    rax,0x1f
         0x48, 0x3d, 0x1f, 0x00, 0x00, 0x00,       // cmp    rax,0x0000001f
@@ -295,8 +263,7 @@ TEST_CASE("compile boolean? with false returns true", "[compiler]")
         0x0f, 0x94, 0xc0,                         // sete   al
         0x48, 0xc1, 0xe0, 0x07,                   // shl    rax,0x7
         0x48, 0x83, 0xc8, 0x1f,                   // or     rax,0x1f
-        0x5d,
-        0xc3}; // ret
+        0xc3};                                    // ret
     REQUIRE(expected == buf._buf);
     auto code = buf.freeze();
     REQUIRE(code.toFunc<int()>()() == Objects::encodeBool(true));
@@ -314,13 +281,10 @@ TEST_CASE("Compile binary +", "[compiler]")
     REQUIRE(0 == Compile::function(buf, node.get()));
     std::vector<uint8_t> expected{
         0x48, 0x89, 0xce,
-        0x55,
-        0x48, 0x89, 0xe5,
         0x48, 0xc7, 0xc0, 0x20, 0x00, 0x00, 0x00, // mov    rax,0x20
-        0x48, 0x89, 0x45, 0xf8,                   // mov    QWORD PTR [rbp-0x8],rax
+        0x48, 0x89, 0x44, 0x24, 0xf8,             // mov    QWORD PTR [rsp-0x8],rax
         0x48, 0xc7, 0xc0, 0x14, 0x00, 0x00, 0x00, // mov    rax,0x14
-        0x48, 0x03, 0x45, 0xf8,                   // add    rax,QWORD PTR [rbp-0x8]
-        0x5d,
+        0x48, 0x03, 0x44, 0x24, 0xf8,             // add    rax,QWORD PTR [rsp-0x8]
         0xc3};
     REQUIRE(expected == buf._buf);
     auto code = buf.freeze();
@@ -334,13 +298,10 @@ TEST_CASE("Compile binary -", "[compiler]")
     REQUIRE(0 == Compile::function(buf, node.get()));
     std::vector<uint8_t> expected{
         0x48, 0x89, 0xce,
-        0x55,
-        0x48, 0x89, 0xe5,
         0x48, 0xc7, 0xc0, 0x20, 0x00, 0x00, 0x00, // mov    rax,0x20
-        0x48, 0x89, 0x45, 0xf8,                   // mov    QWORD PTR [rbp-0x8],rax
+        0x48, 0x89, 0x44, 0x24, 0xf8,             // mov    QWORD PTR [rsp-0x8],rax
         0x48, 0xc7, 0xc0, 0x14, 0x00, 0x00, 0x00, // mov    rax,0x14
-        0x48, 0x2b, 0x45, 0xf8,                   // sub    rax,QWORD PTR [rbp-0x8]
-        0x5d,
+        0x48, 0x2b, 0x44, 0x24, 0xf8,             // sub    QWORD PTR [rsp-0x8],rax
         0xc3};
     REQUIRE(expected == buf._buf);
     auto code = buf.freeze();
@@ -444,8 +405,6 @@ TEST_CASE("if with true cond", "[compiler]")
 
     std::vector<uint8_t> expected = {
         0x48, 0x89, 0xce,
-        0x55,
-        0x48, 0x89, 0xe5,
         0x48, 0xc7, 0xc0, 0x9f, 0x00, 0x00, 0x00, // mov rax, 0x9f
         0x48, 0x3d, 0x1f, 0x00, 0x00, 0x00,       // cmp rax, 0x1f
         0x0f, 0x84, 0x0c, 0x00, 0x00, 0x00,       // je alternate
@@ -453,7 +412,6 @@ TEST_CASE("if with true cond", "[compiler]")
         0xe9, 0x07, 0x00, 0x00, 0x00,             // jmp end
         // alternate:
         0x48, 0xc7, 0xc0, 0x08, 0x00, 0x00, 0x00, // mov rax, compile(2)
-        0x5d,
         0xc3};
     REQUIRE(expected == buf._buf);
     auto code = buf.freeze();
@@ -470,8 +428,6 @@ TEST_CASE("if with false cond", "[compiler]")
 
     std::vector<uint8_t> expected = {
         0x48, 0x89, 0xce,
-        0x55,
-        0x48, 0x89, 0xe5,
         0x48, 0xc7, 0xc0, 0x1f, 0x00, 0x00, 0x00, // mov rax, 0x1f
         0x48, 0x3d, 0x1f, 0x00, 0x00, 0x00,       // cmp rax, 0x1f
         0x0f, 0x84, 0x0c, 0x00, 0x00, 0x00,       // je alternate
@@ -479,7 +435,6 @@ TEST_CASE("if with false cond", "[compiler]")
         0xe9, 0x07, 0x00, 0x00, 0x00,             // jmp end
         // alternate:
         0x48, 0xc7, 0xc0, 0x08, 0x00, 0x00, 0x00, // mov rax, compile(2)
-        0x5d,
         0xc3};
     REQUIRE(expected == buf._buf);
     auto code = buf.freeze();
@@ -496,18 +451,13 @@ TEST_CASE("compile cons", "[compiler]")
 
     std::vector<uint8_t> expected = {
         0x48, 0x89, 0xce,
-        0x55,
-        0x48, 0x89, 0xe5,
         0x48, 0xc7, 0xc0, 0x04, 0x00, 0x00, 0x00, // mov rax, 0x2
-        0x48, 0x89, 0x45, 0xf8,                   // mov [rbp-8], rax
+        0x48, 0x89, 0x46, 0x00,                   // mov [rsi+Car], rax
         0x48, 0xc7, 0xc0, 0x08, 0x00, 0x00, 0x00, // mov rax, 0x4
         0x48, 0x89, 0x46, 0x08,                   // mov [rsi+Cdr], rax
-        0x48, 0x8b, 0x45, 0xf8,                   // mov rax, [rbp-8]
-        0x48, 0x89, 0x46, 0x00,                   // mov [rsi+Car], rax
         0x48, 0x89, 0xf0,                         // mov rax, rsi
         0x48, 0x83, 0xc8, 0x01,                   // or rax, kPairTag
         0x48, 0x81, 0xc6, 0x10, 0x00, 0x00, 0x00, // add rsi, 2*kWordSize
-        0x5d,
         0xc3};
     REQUIRE(expected == buf._buf);
     auto code = buf.freeze();
@@ -533,24 +483,6 @@ TEST_CASE("Compile two cons", "[compiler]")
     REQUIRE(4 == result->asPair()->cdr->getInteger());
 }
 
-TEST_CASE("Compile nested cons", "[compiler]")
-{
-    Buffer buf;
-    auto node = Reader::read("(cons (cons 1 2) (cons 3 4))");
-    auto compileResult = Compile::function(buf, node.get());
-    REQUIRE(compileResult == 0);
-    auto code = buf.freeze();
-    auto heap = std::vector<uword>(64);
-    auto result = code.toFunc<ASTNode *(uword *)>()(heap.data());
-    REQUIRE(result->isPair());
-    REQUIRE(result->asPair()->car->isPair());
-    REQUIRE(result->asPair()->car->asPair()->car->getInteger() == 1);
-    REQUIRE(result->asPair()->car->asPair()->cdr->getInteger() == 2);
-    REQUIRE(result->asPair()->cdr->isPair());
-    REQUIRE(result->asPair()->cdr->asPair()->car->getInteger() == 3);
-    REQUIRE(result->asPair()->cdr->asPair()->cdr->getInteger() == 4);
-}
-
 TEST_CASE("Compile car", "[compiler]")
 {
     Buffer buf;
@@ -559,19 +491,14 @@ TEST_CASE("Compile car", "[compiler]")
     REQUIRE(0 == compileResult);
     std::vector<uint8_t> expected = {
         0x48, 0x89, 0xce,
-        0x55,
-        0x48, 0x89, 0xe5,
         0x48, 0xc7, 0xc0, 0x04, 0x00, 0x00, 0x00, // mov rax, 0x2
-        0x48, 0x89, 0x45, 0xf8,                   // mov [rbp-8], rax
+        0x48, 0x89, 0x46, 0x00,                   // mov [rsi], rax
         0x48, 0xc7, 0xc0, 0x08, 0x00, 0x00, 0x00, // mov rax, 0x4
         0x48, 0x89, 0x46, 0x08,                   // mov [rsi+Cdr], rax
-        0x48, 0x8b, 0x45, 0xf8,                   // mov rax, [rbp-8]
-        0x48, 0x89, 0x46, 0x00,                   // mov [rsi+Car], rax
         0x48, 0x89, 0xf0,                         // mov rax, rsi
         0x48, 0x83, 0xc8, 0x01,                   // or rax, kPairTag
         0x48, 0x81, 0xc6, 0x10, 0x00, 0x00, 0x00, // add rsi, 2*kWordSize
         0x48, 0x8b, 0x40, 0xff,                   // mov rax, [rax-1]
-        0x5d,
         0xc3};
     REQUIRE(expected == buf._buf);
     auto code = buf.freeze();
@@ -591,19 +518,14 @@ TEST_CASE("Compile cdr", "[compiler]")
     REQUIRE(0 == compileResult);
     std::vector<uint8_t> expected = {
         0x48, 0x89, 0xce,
-        0x55,
-        0x48, 0x89, 0xe5,
         0x48, 0xc7, 0xc0, 0x04, 0x00, 0x00, 0x00, // mov rax, 0x2
-        0x48, 0x89, 0x45, 0xf8,                   // mov [rbp-8], rax
+        0x48, 0x89, 0x46, 0x00,                   // mov [rsi], rax
         0x48, 0xc7, 0xc0, 0x08, 0x00, 0x00, 0x00, // mov rax, 0x4
         0x48, 0x89, 0x46, 0x08,                   // mov [rsi+Cdr], rax
-        0x48, 0x8b, 0x45, 0xf8,                   // mov rax, [rbp-8]
-        0x48, 0x89, 0x46, 0x00,                   // mov [rsi+Car], rax
         0x48, 0x89, 0xf0,                         // mov rax, rsi
         0x48, 0x83, 0xc8, 0x01,                   // or rax, kPairTag
         0x48, 0x81, 0xc6, 0x10, 0x00, 0x00, 0x00, // add rsi, 2*kWordSize
         0x48, 0x8b, 0x40, 0x07,                   // mov rax, [rax+7]
-        0x5d,
         0xc3};
     REQUIRE(expected == buf._buf);
     auto code = buf.freeze();
