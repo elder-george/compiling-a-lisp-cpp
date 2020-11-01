@@ -1043,7 +1043,7 @@ namespace Reader
         std::string input;
         word pos;
     };
-    std::unique_ptr<ASTNode, decltype(&heapFree)> read(const std::string &input)
+    std::unique_ptr<ASTNode, decltype(&heapFree)> read(std::string &&input)
     {
         return std::unique_ptr<ASTNode, decltype(&heapFree)>{
             Reader{input, (word)0}.readRec(),

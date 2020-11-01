@@ -223,5 +223,5 @@ namespace Compile
 } // namespace Compile
 
 namespace Reader{
-    std::unique_ptr<ASTNode, decltype(&heapFree)> read(const std::string& input);
+    std::unique_ptr<ASTNode, decltype(&heapFree)> read(std::string&& input);
 }

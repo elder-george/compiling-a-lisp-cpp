@@ -20,7 +20,7 @@ int repl()
             break;
         }
         // parse the line
-        auto node = Reader::read(line);
+        auto node = Reader::read(std::move(line));
         if (node->isError())
         {
             fmt::print(cerr, "Parse error!\n");
