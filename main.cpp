@@ -7,6 +7,33 @@
 
 #include "alisp.h"
 
+std::string format_node(const ASTNode *node)
+{
+    if (node->isInteger())
+    {
+        return std::to_string(node->getInteger());
+    }
+    else if (node->isChar())
+    {
+        return std::string("'") + node->getChar() + "'";
+    }
+    else if (node->isBool())
+    {
+        return node->getBool() ? "#t" : "#f";
+    }
+    else if (node->isSymbol())
+    {
+        return std::string("'") + node->asSymbol()->str;
+    }
+    else if (node->isPair())
+    {
+        auto pair = node->asPair();
+        return std::string("(cons ") + format_node(pair->car) + " " + format_node(pair->cdr) + ")";
+    }
+    assert(false);
+    return {};
+}
+
 int repl()
 {
     using namespace std;
@@ -35,7 +62,9 @@ int repl()
             continue;
         }
         auto code = buf.freeze();
-        fmt::print("Result = {}\n", Objects::decodeInteger(code.toFunc<int()>()()));
+        uword heap[256];
+        auto executionResult = code.toFunc<ASTNode *(uword *)>()(heap);
+        fmt::print("Result = {}\n", format_node(executionResult));
     } while (true);
     return 0;
 }
